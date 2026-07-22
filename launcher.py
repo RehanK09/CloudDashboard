@@ -1,42 +1,88 @@
-import json
 import subprocess
-import os
+import requests
 import time
+import sys
+import os
 
-BASE = os.path.dirname(__file__)
+BASE = os.path.dirname(os.path.abspath(__file__))
 
-with open(os.path.join(BASE, "config.json"), "r") as f:
-    cfg = json.load(f)
+BAT = os.path.join(BASE, "MountCloud.bat")
 
-rclone = cfg["rclone"]
-remote = cfg["remote"]
-drive = cfg["drive"]
-port = cfg["rc_port"]
+PORT = 5572
 
-cmd = [
-    rclone,
-    "mount",
-    remote,
-    drive,
-    "--rc",
-    "--rc-no-auth",
-    "--rc-addr",
-    f"127.0.0.1:{port}",
-    "--vfs-cache-mode",
-    "full",
-    "--buffer-size",
-    "64M",
-    "--stats",
-    "1s"
-]
 
-mount = subprocess.Popen(
-    cmd,
-    creationflags=subprocess.CREATE_NO_WINDOW
-)
+def rc_ready():
 
-time.sleep(3)
+    try:
 
-subprocess.call(["python", "dashboard.py"])
+        requests.post(
+            f"http://127.0.0.1:{PORT}/core/stats",
+            timeout=1
+        )
 
-mount.terminate()
+        return True
+
+    except:
+
+        return False
+
+
+def kill_rclone():
+
+    subprocess.call(
+
+        [
+            "taskkill",
+            "/F",
+            "/IM",
+            "rclone.exe"
+        ],
+
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+
+def main():
+
+    kill_rclone()
+
+    rclone = subprocess.Popen(
+
+        BAT,
+
+        cwd=BASE,
+
+        creationflags=subprocess.CREATE_NEW_CONSOLE
+
+    )
+
+    print("Waiting for rclone...")
+
+    while not rc_ready():
+
+        time.sleep(1)
+
+    print("Connected")
+
+    dashboard = subprocess.Popen(
+
+        [sys.executable, "dashboard.py"],
+
+        cwd=BASE
+
+    )
+
+    dashboard.wait()
+
+    kill_rclone()
+
+    try:
+        rclone.kill()
+    except:
+        pass
+
+
+if __name__ == "__main__":
+
+    main()
