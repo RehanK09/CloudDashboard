@@ -1,281 +1,82 @@
+"""
+widgets/activity.py
+---------------------
+Recent Activity: compact list, newest first — Time, Filename, Status,
+Speed, Transferred.
+
+Reads real data from history.py, which is itself fed by real per-file
+transfer lifecycles in core/api.py's transferring[] (see history.py's
+own docstring for the FAILED-detection caveat). Rather than re-read
+history.json on a timer, this widget subscribes to
+core.events.HISTORY_UPDATED, which history.py publishes the instant it
+writes a finished transfer — so it shows up here immediately, not on
+the next poll.
+"""
+
 import customtkinter as ctk
 
-from history import history_tracker
+from core.events import bus, HISTORY_UPDATED
+from history import load_history
+
+MAX_ROWS = 50
 
 
-class ActivityWidget(ctk.CTkFrame):
+class ActivityRow(ctk.CTkFrame):
+    def __init__(self, master, entry, **kwargs):
+        super().__init__(master, fg_color="transparent", **kwargs)
 
-    MAX_ITEMS = 150
+        color = "#2ecc71" if entry.get("status") == "SUCCESS" else "#e74c3c"
 
-    def __init__(self, parent):
+        ctk.CTkLabel(
+            self, text=entry.get("time", ""), width=70,
+            font=ctk.CTkFont(size=11), text_color="#a0a0a0", anchor="w",
+        ).pack(side="left", padx=(6, 4))
 
-        super().__init__(
-            parent,
-            corner_radius=15
-        )
-
-        self.title = ctk.CTkLabel(
-
-            self,
-
-            text="Recent Activity",
-
-            font=("Segoe UI Semibold",18)
-
-        )
-
-        self.title.pack(
-
+        ctk.CTkLabel(
+            self, text=entry.get("filename", ""), font=ctk.CTkFont(size=11),
             anchor="w",
+        ).pack(side="left", fill="x", expand=True, padx=4)
 
-            padx=15,
+        ctk.CTkLabel(
+            self, text=entry.get("speed", ""), width=90,
+            font=ctk.CTkFont(size=11), text_color="#a0a0a0", anchor="e",
+        ).pack(side="left", padx=4)
 
-            pady=(12,8)
+        ctk.CTkLabel(
+            self, text=entry.get("size", ""), width=80,
+            font=ctk.CTkFont(size=11), text_color="#a0a0a0", anchor="e",
+        ).pack(side="left", padx=4)
 
-        )
+        ctk.CTkLabel(
+            self, text=entry.get("status", ""), width=70,
+            font=ctk.CTkFont(size=11, weight="bold"), text_color=color, anchor="e",
+        ).pack(side="left", padx=(4, 6))
 
-        self.list = ctk.CTkScrollableFrame(
 
-            self,
+class ActivityList(ctk.CTkScrollableFrame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, label_text="Recent Activity", **kwargs)
 
-            fg_color="transparent"
+        self._entries = load_history(limit=MAX_ROWS)
+        self._rows = []
+        self._render()
 
-        )
+        self._unsub = bus.subscribe(HISTORY_UPDATED, self._on_new_entry)
+        self.bind("<Destroy>", self._on_destroy)
 
-        self.list.pack(
+    def _on_new_entry(self, entry):
+        self._entries.insert(0, entry)
+        self._entries = self._entries[:MAX_ROWS]
+        self._render()
 
-            fill="both",
-
-            expand=True,
-
-            padx=10,
-
-            pady=(0,10)
-
-        )
-
-        self.rows = []
-
-        self.refresh()
-
-    # ====================================================
-
-    def _badge_color(self, status):
-
-        status = status.lower()
-
-        colors = {
-
-            "completed": "#43A047",
-
-            "uploading": "#1976D2",
-
-            "downloading": "#2E7D32",
-
-            "paused": "#F9A825",
-
-            "failed": "#D32F2F",
-
-            "deleted": "#8E24AA"
-
-        }
-
-        return colors.get(
-
-            status,
-
-            "#616161"
-
-        )
-
-    # ====================================================
-
-    def refresh(self):
-
-        for row in self.rows:
-
+    def _render(self):
+        for row in self._rows:
             row.destroy()
-
-        self.rows.clear()
-
-        try:
-
-            history = list(
-
-                reversed(
-
-                    history_tracker.history[-self.MAX_ITEMS:]
-
-                )
-
-            )
-
-        except Exception:
-
-            history = []
-
-        if not history:
-
-            lbl = ctk.CTkLabel(
-
-                self.list,
-
-                text="No Recent Activity",
-
-                font=("Segoe UI",16),
-
-                text_color="gray70"
-
-            )
-
-            lbl.pack(
-
-                pady=20
-
-            )
-
-            self.rows.append(lbl)
-
-            return
-
-        for item in history:
-
-            frame = ctk.CTkFrame(
-
-                self.list,
-
-                corner_radius=10
-
-            )
-
-            frame.pack(
-
-                fill="x",
-
-                padx=4,
-
-                pady=4
-
-            )
-
-            left = ctk.CTkFrame(
-
-                frame,
-
-                fg_color="transparent"
-
-            )
-
-            left.pack(
-
-                side="left",
-
-                fill="x",
-
-                expand=True,
-
-                padx=10,
-
-                pady=8
-
-            )
-
-            name = ctk.CTkLabel(
-
-                left,
-
-                text=item.get(
-
-                    "name",
-
-                    "Unknown File"
-
-                ),
-
-                anchor="w",
-
-                font=("Segoe UI",15)
-
-            )
-
-            name.pack(
-
-                anchor="w"
-
-            )
-
-            detail = ctk.CTkLabel(
-
-                left,
-
-                text=item.get(
-
-                    "time",
-
-                    ""
-
-                ),
-
-                anchor="w",
-
-                font=("Segoe UI",12),
-
-                text_color="gray70"
-
-            )
-
-            detail.pack(
-
-                anchor="w"
-
-            )
-
-            badge = ctk.CTkLabel(
-
-                frame,
-
-                text=item.get(
-
-                    "status",
-
-                    "DONE"
-
-                ).upper(),
-
-                width=95,
-
-                height=28,
-
-                corner_radius=14,
-
-                fg_color=self._badge_color(
-
-                    item.get(
-
-                        "status",
-
-                        ""
-
-                    )
-
-                ),
-
-                font=("Segoe UI",11,"bold")
-
-            )
-
-            badge.pack(
-
-                side="right",
-
-                padx=10
-
-            )
-
-            self.rows.append(frame)
-
-    # ====================================================
-
-    def update(self):
-
-        self.refresh()
+        self._rows = []
+        for entry in self._entries:
+            row = ActivityRow(self, entry)
+            row.pack(fill="x", pady=1)
+            self._rows.append(row)
+
+    def _on_destroy(self, _event):
+        self._unsub()

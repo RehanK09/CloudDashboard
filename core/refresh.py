@@ -1,260 +1,88 @@
-import threading
-import time
+"""
+core/refresh.py
+----------------
+Adaptive refresh scheduler for the v4 dashboard.
 
-from core.api import api
-from core.status import status
+This is the ONLY thing in the entire v4 UI that reads from
+core/api.py. It runs on a plain Tkinter after() timer — never a
+background thread, because reading rclone_api's already-cached dict
+is instant, there's nothing to gain from a thread here. It republishes
+whatever it reads through core/events.py; every widget subscribes
+instead of polling on its own.
+
+Adaptive rate, per the v4 spec:
+- 100ms tick while something is transferring
+- 500ms tick while idle
+- storage is re-published every 5s regardless of tick rate
+
+One thing worth being explicit about: core/api.py itself only
+re-fetches storage from rclone every 30s internally (that's the
+backend behavior — untouched, per your "don't rewrite the API" rule).
+This scheduler's "every 5s" is just how often the UI re-announces
+whatever number is already cached; it does not add new network calls,
+and the number itself still only changes at api.py's own 30s pace.
+
+Connection state (feeds the ONLINE/OFFLINE/UPLOADING pill) is checked
+on every single tick, so it's accurate within one tick — effectively
+instant at both 100ms and 500ms.
+"""
+
+from core.api import rclone_api
+from core.events import bus, STATS_UPDATED, STORAGE_UPDATED, CONNECTION_CHANGED
+
+IDLE_INTERVAL_MS = 500
+ACTIVE_INTERVAL_MS = 100
+STORAGE_INTERVAL_MS = 5000
 
 
-class RefreshManager:
-
-    def __init__(self, dashboard):
-
-        self.dashboard = dashboard
-
-        self.api = api
-
-        self.running = False
-
-        self.thread = None
-
-    # =====================================================
+class RefreshScheduler:
+    def __init__(self, root):
+        self._root = root
+        self._running = False
+        self._last_connected = None
+        self._ms_since_storage = STORAGE_INTERVAL_MS  # publish once immediately
+        self._current_interval = IDLE_INTERVAL_MS
 
     def start(self):
-
-        if self.running:
-
+        if self._running:
             return
-
-        self.running = True
-
-        self.api.start()
-
-        self.thread = threading.Thread(
-
-            target=self.loop,
-
-            daemon=True
-
-        )
-
-        self.thread.start()
-
-    # =====================================================
+        self._running = True
+        self._tick()
 
     def stop(self):
+        self._running = False
 
-        self.running = False
+    def _tick(self):
+        if not self._running:
+            return
 
-    # =====================================================
+        stats = rclone_api.get_stats()
+        bus.publish(STATS_UPDATED, stats)
 
-    def loop(self):
+        connected = stats["connected"]
+        if connected != self._last_connected:
+            self._last_connected = connected
+            bus.publish(CONNECTION_CHANGED, connected)
 
-        while self.running:
+        self._ms_since_storage += self._current_interval
+        if self._ms_since_storage >= STORAGE_INTERVAL_MS:
+            self._ms_since_storage = 0
+            bus.publish(STORAGE_UPDATED, rclone_api.get_storage())
 
-            try:
+        is_uploading = bool(stats["transferring"])
+        self._current_interval = ACTIVE_INTERVAL_MS if is_uploading else IDLE_INTERVAL_MS
 
-                stats = self.api.stats()
+        self._root.after(self._current_interval, self._tick)
 
-                storage = self.api.storage()
 
-                transfer = self.api.transfer()
+_scheduler = None
 
-                connected = stats.get(
 
-                    "connected",
-
-                    False
-
-                )
-
-                transferring = stats.get(
-
-                    "transferring",
-
-                    []
-
-                )
-
-                uploading = len(
-
-                    transferring
-
-                ) > 0
-
-                #
-                # Download detection will be added later
-                #
-
-                downloading = False
-
-                paused = False
-
-                errors = stats.get(
-
-                    "errors",
-
-                    0
-
-                )
-
-                status.update(
-
-                    connected=connected,
-
-                    uploading=uploading,
-
-                    downloading=downloading,
-
-                    paused=paused,
-
-                    errors=errors,
-
-                    upload_count=len(
-
-                        transferring
-
-                    ),
-
-                    download_count=0
-
-                )
-
-                self.dashboard.app.after(
-
-                    0,
-
-                    lambda s=stats, st=storage, t=transfer:
-
-                    self.update_ui(
-
-                        s,
-
-                        st,
-
-                        t
-
-                    )
-
-                )
-
-            except Exception as e:
-
-                print(
-
-                    "Refresh:",
-
-                    e
-
-                )
-
-            #
-            # Adaptive refresh
-            #
-
-            if uploading:
-
-                time.sleep(
-
-                    0.10
-
-                )
-
-            else:
-
-                time.sleep(
-
-                    0.50
-
-                )
-
-    # =====================================================
-
-    def update_ui(
-
-        self,
-
-        stats,
-
-        storage,
-
-        transfer
-
-    ):
-
-        try:
-
-            self.dashboard.header.refresh(
-
-                stats
-
-            )
-
-        except:
-
-            pass
-
-        try:
-
-            self.dashboard.storage.refresh(
-
-                storage,
-
-                stats
-
-            )
-
-        except:
-
-            pass
-
-        try:
-
-            self.dashboard.transfer_manager.refresh()
-
-        except:
-
-            pass
-
-        try:
-
-            self.dashboard.graph.update(
-
-                stats
-
-            )
-
-        except:
-
-            pass
-
-        try:
-
-            self.dashboard.stats.update(
-
-                stats,
-
-                storage
-
-            )
-
-        except:
-
-            pass
-
-        try:
-        
-            self.dashboard.upload_panel.refresh(
-            
-                stats.get(
-                
-                    "transferring",
-        
-                    []
-        
-                )
-        
-            )
-        
-        except:
-        
-            pass
+def start_refresh(root):
+    """Call once from app_v4.py / dashboard_v4.py after the root window
+    exists. Safe to call more than once — reuses the same scheduler."""
+    global _scheduler
+    if _scheduler is None:
+        _scheduler = RefreshScheduler(root)
+    _scheduler.start()
+    return _scheduler

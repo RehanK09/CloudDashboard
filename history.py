@@ -41,8 +41,9 @@ from tkinter import ttk, filedialog, messagebox
 
 import customtkinter as ctk
 
-from api import rclone_api
-from formatters import format_size, format_speed
+from core.api import rclone_api
+from core.events import bus, HISTORY_UPDATED
+from utils import format_size, format_speed
 
 HISTORY_FILE = "history.json"
 DEFAULT_HISTORY_LIMIT = 500
@@ -134,19 +135,15 @@ class HistoryTracker:
 
         for item in stats["transferring"]:
             name = item["name"]
-            transfer_id = f"{name}_{item.get('size',0)}"
-            current_names.add(transfer_id)
-            if transfer_id not in self._active:
-                self._active[transfer_id] = {
+            current_names.add(name)
+            if name not in self._active:
+                self._active[name] = {
                     "start_time": time.time(),
                     "size": item.get("size", 0),
                     "errors_at_start": stats.get("errors", 0),
                 }
 
-        finished = [
-        n for n in self._active
-        if n not in current_names
-        ]
+        finished = [n for n in self._active if n not in current_names]
         for name in finished:
             record = self._active.pop(name)
             self._finalize(name, record, stats)
@@ -168,8 +165,7 @@ class HistoryTracker:
             "duration": _format_duration(duration),
         }
         add_history_entry(entry)
-
-history_tracker = HistoryTracker()
+        bus.publish(HISTORY_UPDATED, entry)
 
 
 # ======================================================================
@@ -329,20 +325,7 @@ class HistoryWindow(ctk.CTkToplevel):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-
     def _on_close(self):
         global _history_window
         _history_window = None
         self.destroy()
-
-
-    def stop_history():
-        global _history_window
-        if _history_window is not None:
-            try:
-                if _history_window.winfo_exists():
-                    _history_window.destroy()
-            except Exception:
-                pass
-
-        _history_window = None
