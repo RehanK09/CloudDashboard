@@ -1,6 +1,5 @@
 import os
 import subprocess
-import signal
 import platform
 from tkinter import messagebox
 
@@ -90,54 +89,3 @@ def ask_exit(upload_running=False):
         "Close Cloud Dashboard?"
 
     )
-
-
-def format_speed(speed):
-
-    speed = float(speed)
-
-    units = [
-
-        "B/s",
-        "KB/s",
-        "MB/s",
-        "GB/s",
-        "TB/s"
-
-    ]
-
-    for unit in units:
-
-        if speed < 1024:
-
-            return f"{speed:.2f} {unit}"
-
-        speed /= 1024
-
-    return f"{speed:.2f} PB/s"
-
-
-def format_size(size):
-
-    size = float(size)
-
-    units = [
-
-        "B",
-        "KB",
-        "MB",
-        "GB",
-        "TB",
-        "PB"
-
-    ]
-
-    for unit in units:
-
-        if size < 1024:
-
-            return f"{size:.2f} {unit}"
-
-        size /= 1024
-
-    return f"{size:.2f} EB"

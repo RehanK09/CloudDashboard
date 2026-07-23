@@ -34,16 +34,20 @@ import requests
 
 
 class RcloneAPI:
-    STATS_INTERVAL = 1.0     # "Stats every 1 sec" (from your goals)
-    STORAGE_INTERVAL = 30.0  # "Storage every 30 sec"
+
+    STATS_INTERVAL_ACTIVE = 0.10 # "Stats every 1 sec" (from your goals)
+    STATS_INTERVAL_IDLE = 0.50   # "Storage every 30 sec"
+    STORAGE_INTERVAL = 5
 
     def __init__(self, config_path="config.json"):
         self._config_path = config_path
         self._config = self._load_config()
 
-        self.rclone_path = self._config.get("rclone", "")
-        self.remote = self._config.get("remote", "")
-        self.drive = self._config.get("drive", "")
+        drive = self._config["drives"][0]
+
+        self.rclone_path = drive["rclone"]
+        self.remote = drive["remote"]
+        self.drive = drive["drive"]
         self.rc_port = self._config.get("rc_port", 5572)
         self.base_url = f"http://127.0.0.1:{self.rc_port}"
 
@@ -92,12 +96,12 @@ class RcloneAPI:
         without restarting the dashboard."""
         with self._lock:
             self._config = self._load_config()
-            self.rclone_path = self._config.get("rclone", self.rclone_path)
-            self.remote = self._config.get("remote", self.remote)
-            self.drive = self._config.get("drive", self.drive)
-            self.rc_port = self._config.get("rc_port", self.rc_port)
-            self.base_url = f"http://127.0.0.1:{self.rc_port}"
+        drive = self._config["drives"][0]
 
+        self.rclone_path = drive["rclone"]
+        self.remote = drive["remote"]
+        self.drive = drive["drive"]
+        self.rc_port = self._config.get("rc_port", self.rc_port)
     # ----------------------------------------------------------------
     # lifecycle
     # ----------------------------------------------------------------
@@ -114,17 +118,41 @@ class RcloneAPI:
     # ----------------------------------------------------------------
     # background loop — this thread NEVER touches Tkinter widgets
     # ----------------------------------------------------------------
+
     def _poll_loop(self):
+
         last_storage_fetch = 0.0
+
         while not self._stop_event.is_set():
+
             self._poll_stats()
 
             now = time.time()
+
             if now - last_storage_fetch >= self.STORAGE_INTERVAL:
+
                 self._poll_storage()
+
                 last_storage_fetch = now
 
-            self._stop_event.wait(self.STATS_INTERVAL)
+            stats = self.get_stats()
+
+            if stats.get("transferring"):
+
+                interval = self.STATS_INTERVAL_ACTIVE
+
+            else:
+
+                interval = self.STATS_INTERVAL_IDLE
+
+            self._stop_event.wait(interval)
+
+
+
+
+
+
+
 
     def _poll_stats(self):
         try:

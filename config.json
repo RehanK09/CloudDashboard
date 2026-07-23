@@ -1,6 +1,14 @@
 {
-    "rclone": "D:\\Apps\\rclone\\rclone.exe",
-    "remote": "GAurGhusMAurMhus:",
-    "drive": "X:",
-    "rc_port": 5572
+    "rc_port": 5572,
+
+    "drives": [
+
+        {
+            "name": "Google Drive",
+            "remote": "GAurGhusMAurMhus:",
+            "drive": "X:",
+            "rclone": "D:\\Apps\\rclone\\rclone.exe"
+        }
+
+    ]
 }

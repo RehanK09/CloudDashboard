@@ -49,7 +49,7 @@ class RefreshManager:
         self.update_once()
 
         self.app.after(
-            250,
+            100,
             self.update
         )
 
@@ -83,6 +83,8 @@ class RefreshManager:
         else:
 
             self.graph.add(0)
+
+        self.graph_card.update_stats(stats)
 
         self.graph_card.redraw()
 

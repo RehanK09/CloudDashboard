@@ -65,13 +65,17 @@ def main():
 
     print("Connected")
 
+
+
+
     dashboard = subprocess.Popen(
 
-        [sys.executable, "dashboard.py"],
+        [sys.executable, "app_v4.py"],
 
         cwd=BASE
 
     )
+
 
     dashboard.wait()
 

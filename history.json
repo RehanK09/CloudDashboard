@@ -8,5 +8,55 @@
     "destination": "GAurGhusMAurMhus:",
     "speed": "2.38 MB/s",
     "duration": "2m 35s"
+  },
+  {
+    "date": "2026-07-23",
+    "time": "12:48:33",
+    "filename": "2020 LG OLED l  The Black 4K HDR 60fps [njX2bu-_Vw4] .mp4_388196913",
+    "size": "370.21 MB",
+    "status": "FAILED",
+    "destination": "GAurGhusMAurMhus:",
+    "speed": "115.04 MB/s",
+    "duration": "3s"
+  },
+  {
+    "date": "2026-07-23",
+    "time": "12:51:50",
+    "filename": "New Python Source File.py_0",
+    "size": "0.00 B",
+    "status": "SUCCESS",
+    "destination": "GAurGhusMAurMhus:",
+    "speed": "0.00 B/s",
+    "duration": "3s"
+  },
+  {
+    "date": "2026-07-23",
+    "time": "14:32:40",
+    "filename": "New Text Document.txt_0",
+    "size": "0 B",
+    "status": "SUCCESS",
+    "destination": "GAurGhusMAurMhus:",
+    "speed": "0 B/s",
+    "duration": "3s"
+  },
+  {
+    "date": "2026-07-23",
+    "time": "14:33:35",
+    "filename": "Yt-Dlp/fix_yt.bat_485",
+    "size": "485 B",
+    "status": "SUCCESS",
+    "destination": "GAurGhusMAurMhus:",
+    "speed": "228 B/s",
+    "duration": "2s"
+  },
+  {
+    "date": "2026-07-23",
+    "time": "14:33:35",
+    "filename": "Yt-Dlp/yt-dlp.exe_18448981",
+    "size": "17.59 MB",
+    "status": "SUCCESS",
+    "destination": "GAurGhusMAurMhus:",
+    "speed": "840.53 KB/s",
+    "duration": "21s"
   }
 ]

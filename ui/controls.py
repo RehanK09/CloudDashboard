@@ -7,63 +7,143 @@ class Controls:
 
     def __init__(self, parent):
 
-        self.frame = ctk.CTkFrame(parent)
+        self.frame = ctk.CTkFrame(
+            parent,
+            corner_radius=15
+        )
 
         self.frame.pack(
-            fill="x",
-            padx=10,
-            pady=(0, 10)
+            fill="both",
+            expand=True
         )
+
+        ctk.CTkLabel(
+
+            self.frame,
+
+            text="⚡ Quick Actions",
+
+            font=("Segoe UI Semibold",18)
+
+        ).pack(
+            anchor="w",
+            padx=20,
+            pady=(18,15)
+        )
+
+        self.grid = ctk.CTkFrame(
+            self.frame,
+            fg_color="transparent"
+        )
+
+        self.grid.pack(
+            fill="both",
+            expand=True,
+            padx=20,
+            pady=(0,20)
+        )
+
+        self.grid.grid_columnconfigure((0,1), weight=1)
+        self.grid.grid_rowconfigure((0,1), weight=1)
 
         self.pause_btn = ctk.CTkButton(
-            self.frame,
-            text="Pause",
-            width=120,
+
+            self.grid,
+
+            text="⏸\nPause",
+
+            height=90,
+
+            font=("Segoe UI",15),
+
+            corner_radius=15,
+
             command=self.pause
+
         )
 
-        self.pause_btn.pack(
-            side="left",
-            padx=8,
-            pady=10
+        self.pause_btn.grid(
+            row=0,
+            column=0,
+            sticky="nsew",
+            padx=6,
+            pady=6
         )
 
         self.resume_btn = ctk.CTkButton(
-            self.frame,
-            text="Resume",
-            width=120,
+
+            self.grid,
+
+            text="▶\nResume",
+
+            height=90,
+
+            font=("Segoe UI",15),
+
+            corner_radius=15,
+
             command=self.resume
+
         )
 
-        self.resume_btn.pack(
-            side="left",
-            padx=8
-        )
-
-        self.stop_btn = ctk.CTkButton(
-            self.frame,
-            text="Stop",
-            width=120,
-            fg_color="#c62828",
-            hover_color="#8e0000",
-            command=self.stop
-        )
-
-        self.stop_btn.pack(
-            side="left",
-            padx=8
+        self.resume_btn.grid(
+            row=0,
+            column=1,
+            sticky="nsew",
+            padx=6,
+            pady=6
         )
 
         self.refresh_btn = ctk.CTkButton(
-            self.frame,
-            text="Refresh",
-            width=120,
+
+            self.grid,
+
+            text="🔄\nRefresh",
+
+            height=90,
+
+            font=("Segoe UI",15),
+
+            corner_radius=15,
+
             command=self.refresh
+
         )
 
-        self.refresh_btn.pack(
-            side="right",
-            padx=8
+        self.refresh_btn.grid(
+            row=1,
+            column=0,
+            sticky="nsew",
+            padx=6,
+            pady=6
+        )
+
+        self.stop_btn = ctk.CTkButton(
+
+            self.grid,
+
+            text="⏹\nStop",
+
+            height=90,
+
+            font=("Segoe UI",15),
+
+            corner_radius=15,
+
+            fg_color="#C62828",
+
+            hover_color="#8E0000",
+
+            command=self.stop
+
+        )
+
+        self.stop_btn.grid(
+            row=1,
+            column=1,
+            sticky="nsew",
+            padx=6,
+            pady=6
         )
 
         self.refresh_callback = None

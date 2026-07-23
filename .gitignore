@@ -1,19 +1,20 @@
 __pycache__/
 *.pyc
-
-venv/
 .venv/
+venv/
+.env
 
-dist/
-build/
-
-*.spec
-
-data/logs/*.log
-data/database/*.db
-
-.idea/
 .vscode/
+.idea/
+
+build/
+dist/
+
+*.log
+
+converted_files.txt
+
+.history/
 
 Thumbs.db
 Desktop.ini
